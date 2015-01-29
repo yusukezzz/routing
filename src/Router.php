@@ -13,11 +13,11 @@ class Router
     /** @var Route */
     protected $currentRoute = null;
 
-    public function __construct(RouteHandlerInterface $resolver = null)
+    public function __construct(RouteHandlerInterface $handler = null)
     {
         $this->parser = new RouteParser;
         $this->generator = new RouteDataGenerator();
-        $this->handler = $resolver ?: new RouteHandler();
+        $this->handler = $handler ?: new RouteHandler();
     }
 
     /**
