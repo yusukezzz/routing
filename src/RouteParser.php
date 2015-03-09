@@ -1,20 +1,16 @@
-<?php
-
-namespace FastRoute;
+<?php namespace yusukezzz\Routing;
 
 /**
  * Parses routes of the following form:
  *
- * "/user/{name}/{id:[0-9]+}"
+ * "/user/:name"
  */
-class RouteParser {
+class RouteParser
+{
     const VARIABLE_REGEX = <<<'REGEX'
-~\{
+~:
     \s* ([a-zA-Z][a-zA-Z0-9_]*) \s*
-    (?:
-        : \s* ([^{}]*(?:\{(?-1)\}[^{}]*)*)
-    )?
-\}~x
+~x
 REGEX;
 
     const DEFAULT_DISPATCH_REGEX = '[^/]+';
@@ -26,8 +22,10 @@ REGEX;
         )) {
             return [$route];
         }
+
         $offset = 0;
         $routeData = [];
+
         foreach ($matches as $set) {
             if ($set[0][1] > $offset) {
                 $routeData[] = substr($route, $offset, $set[0][1] - $offset);
@@ -38,9 +36,13 @@ REGEX;
             ];
             $offset = $set[0][1] + strlen($set[0][0]);
         }
-        if ($offset != strlen($route)) {
+
+        // append static parts if exits after variables
+        // e.g. /static/:var/static
+        if ($offset !== strlen($route)) {
             $routeData[] = substr($route, $offset);
         }
+
         return $routeData;
     }
 }

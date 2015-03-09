@@ -1,6 +1,4 @@
-<?php
-
-namespace FastRoute;
+<?php namespace yusukezzz\Routing;
 
 class RouteHandler implements RouteHandlerInterface
 {
@@ -10,6 +8,6 @@ class RouteHandler implements RouteHandlerInterface
      */
     public function handleRoute(Route $route)
     {
-        return call_user_func_array($route->handler(), $route->variables());
+        return call_user_func_array($route->getHandler(), $route->getVariables());
     }
 }

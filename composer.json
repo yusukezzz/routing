@@ -1,6 +1,6 @@
 {
-  "name": "yusukezzz/fast-route",
-  "description": "Fast request router for PHP",
+  "name": "yusukezzz/routing",
+  "description": "Simple and fast request router for PHP",
   "keywords": ["routing", "router"],
   "license": "BSD-3-Clause",
   "authors": [
@@ -17,7 +17,7 @@
   },
   "autoload": {
     "psr-4": {
-      "FastRoute\\": "src/"
+      "yusukezzz\\Routing\\": "src/"
     }
   }
 }

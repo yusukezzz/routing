@@ -1,5 +1,5 @@
 <?php
 
-namespace FastRoute\Exceptions;
+namespace yusukezzz\Routing\Exceptions;
 
 class BadRouteException extends \Exception {}

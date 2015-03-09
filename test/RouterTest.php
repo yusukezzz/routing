@@ -3,13 +3,13 @@
 class RouterTest extends PHPUnit_Framework_TestCase
 {
     /**
-     * @var \FastRoute\Router
+     * @var \yusukezzz\Routing\Router
      */
     protected $router;
 
     protected function setUp()
     {
-        $this->router = new \FastRoute\Router();
+        $this->router = new \yusukezzz\Routing\Router();
     }
 
     protected function tearDown()
@@ -31,7 +31,7 @@ class RouterTest extends PHPUnit_Framework_TestCase
 
     public function test_addRoute_variable_routing()
     {
-        $this->router->get('/hoge/{var1}/{var2}', function($var1, $var2)
+        $this->router->get('/hoge/:var1/:var2', function($var1, $var2)
         {
             return "got {$var1} and {$var2}";
         });
@@ -43,7 +43,7 @@ class RouterTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \FastRoute\Exceptions\NotFoundException
+     * @expectedException \yusukezzz\Routing\Exceptions\NotFoundException
      * @expectedExceptionMessage Route '/hoge' not found
      */
     public function test_handle_not_found()
@@ -52,7 +52,7 @@ class RouterTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \FastRoute\Exceptions\MethodNotAllowedException
+     * @expectedException \yusukezzz\Routing\Exceptions\MethodNotAllowedException
      * @expectedExceptionMessage Allow GET,POST
      */
     public function test_handle_methods_not_allowed()
@@ -63,22 +63,25 @@ class RouterTest extends PHPUnit_Framework_TestCase
         $this->router->handle('PUT', $uri);
     }
 
-    public function test_urlFor_static_routing()
+    /**
+     * @dataProvider urlForDataProvider
+     */
+    public function test_urlFor($name, $uri, $params, $expected)
     {
-        $name = 'static_route';
-        $this->router->get('/hoge/huga/piyo', 'handler', $name);
-        $res = $this->router->urlFor($name);
-
-        $this->assertSame('/hoge/huga/piyo', $res);
+        $this->router->get($uri, 'handler', $name);
+        $actual = $this->router->urlFor($name, $params);
+        $this->assertSame($expected, $actual);
     }
 
-    public function test_urlFor_variable_routing()
+    public static function urlForDataProvider()
     {
-        $name = 'variable_route';
-        $this->router->get('/hoge/{string}/{id}', 'handler', $name);
-        $res = $this->router->urlFor($name, ['string' => 'aiueo', 'id' => 123]);
-
-        $this->assertSame('/hoge/aiueo/123', $res);
+        return [
+            ['static_only', '/hoge/huga/piyo', [], '/hoge/huga/piyo'],
+            ['variable_only', '/:string/:id', ['string' => 'aiueo', 'id' => 123], '/aiueo/123'],
+            ['static_variable', '/hoge/:string', ['string' => 'aiueo'], '/hoge/aiueo'],
+            ['static_variable_static', '/hoge/:string/static', ['string' => 'aiueo'], '/hoge/aiueo/static'],
+            ['variable_static', '/:string/hoge', ['string' => 'aiueo'], '/aiueo/hoge'],
+        ];
     }
 
     /**
@@ -97,7 +100,7 @@ class RouterTest extends PHPUnit_Framework_TestCase
     public function test_urlFor_nothing_parameter()
     {
         $name = 'nothing_parameter';
-        $this->router->get('/{param}', 'handler', $name);
+        $this->router->get('/:param', 'handler', $name);
         $this->router->urlFor($name, []);
     }
 
@@ -108,7 +111,7 @@ class RouterTest extends PHPUnit_Framework_TestCase
     public function test_urlFor_null_parameter()
     {
         $name = 'null_parameter';
-        $this->router->get('/{param}', 'handler', $name);
+        $this->router->get('/:param', 'handler', $name);
         $this->router->urlFor($name, ['param' => null]);
     }
 }

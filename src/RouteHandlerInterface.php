@@ -1,6 +1,4 @@
-<?php
-
-namespace FastRoute;
+<?php namespace yusukezzz\Routing;
 
 interface RouteHandlerInterface
 {

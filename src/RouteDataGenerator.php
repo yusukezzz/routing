@@ -1,8 +1,6 @@
-<?php
+<?php namespace yusukezzz\Routing;
 
-namespace FastRoute;
-
-use FastRoute\Exceptions\BadRouteException;
+use yusukezzz\Routing\Exceptions\BadRouteException;
 
 class RouteDataGenerator
 {
@@ -11,15 +9,29 @@ class RouteDataGenerator
     /** @var array */
     protected $staticRoutes = [];
     /** @var array */
-    protected $methodToRegexToRoutesMap = [];
+    protected $variableRoutes = [];
     /** @var array */
     protected $namedRoutes = [];
+    /** @var array */
+    protected $methodToRegexToRoutesMap = [];
+
+    /**
+     * @param array $cachedRoutes cached getData method values
+     */
+    public function __construct(array $cachedRoutes = null)
+    {
+        if ($cachedRoutes) {
+            $this->staticRoutes = $cachedRoutes[0];
+            $this->variableRoutes = $cachedRoutes[1];
+            $this->namedRoutes = $cachedRoutes[2];
+        }
+    }
 
     /**
      * @param string $httpMethod
      * @param array $routeData
      * @param string $pattern
-     * @param callable $handler
+     * @param mixed $handler
      * @param string $name
      */
     public function addRoute($httpMethod, $routeData, $pattern, $handler, $name = null)
@@ -30,31 +42,33 @@ class RouteDataGenerator
             $route = $this->addVariableRoute($httpMethod, $routeData, $pattern, $handler, $name);
         }
 
-        if ( ! is_null($name)) {
+        if ($name) {
             $this->namedRoutes[$name] = $route;
         }
     }
 
     /**
      * @param string $name
+     * @throws \RuntimeException
      * @return Route
      */
     public function getNamedRoute($name)
     {
-        if (isset($this->namedRoutes[$name])) {
-            return $this->namedRoutes[$name];
-        } else {
-            return null;
+        if ( ! isset($this->namedRoutes[$name])) {
+            throw new \RuntimeException("Named route '{$name}' not found");
         }
+
+        return $this->namedRoutes[$name];
     }
 
+    /**
+     * @return array
+     */
     public function getData()
     {
-        if (empty($this->methodToRegexToRoutesMap)) {
-            return [$this->staticRoutes, []];
-        }
+        $variableRoutes = $this->variableRoutes ? $this->variableRoutes : $this->generateVariableRouteData();
 
-        return [$this->staticRoutes, $this->generateVariableRouteData()];
+        return [$this->staticRoutes, $variableRoutes, $this->namedRoutes];
     }
 
     /**
@@ -67,7 +81,7 @@ class RouteDataGenerator
         $regex_list = [];
         $numGroups = 0;
         foreach ($regexToRoutesMap as $regex => $route) {
-            $numVariables = count($route->variableNames());
+            $numVariables = count($route->getVariableNames());
             $numGroups = max($numGroups, $numVariables);
 
             $regex_list[] = $regex . str_repeat('()', $numGroups - $numVariables);
@@ -77,6 +91,7 @@ class RouteDataGenerator
         }
 
         $regex = '~^(?|' . implode('|', $regex_list) . ')$~';
+
         return ['regex' => $regex, 'routeMap' => $routeMap];
     }
 
@@ -88,12 +103,16 @@ class RouteDataGenerator
             $chunks = array_chunk($regexToRoutesMap, $chunkSize, true);
             $data[$method] =  array_map([$this, 'processChunk'], $chunks);
         }
+
+        unset($this->methodToRegexToRoutesMap);
+
         return $data;
     }
 
     protected function computeChunkSize($count)
     {
         $numParts = max(1, round($count / self::APPROX_CHUNK_SIZE));
+
         return ceil($count / $numParts);
     }
 
@@ -119,7 +138,7 @@ class RouteDataGenerator
                 if ($route->matches($routeStr)) {
                     throw new BadRouteException(sprintf(
                         'Static route "%s" is shadowed by previously defined variable route "%s" for method "%s"',
-                        $routeStr, $route->regex(), $httpMethod
+                        $routeStr, $route->getRegex(), $httpMethod
                     ));
                 }
             }

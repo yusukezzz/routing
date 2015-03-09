@@ -1,16 +1,7 @@
-<?php
-
-namespace FastRoute;
+<?php namespace yusukezzz\Routing;
 
 class Route
 {
-    const GET = 'GET';
-    const HEAD = 'HEAD';
-    const POST = 'POST';
-    const PUT = 'PUT';
-    const DELETE = 'DELETE';
-    const OPTIONS = 'OPTIONS';
-
     /** @var string */
     protected $httpMethod;
     /** @var string */
@@ -44,22 +35,22 @@ class Route
         $this->name = $name;
     }
 
-    public function httpMethod()
+    public function getHttpMethod()
     {
         return $this->httpMethod;
     }
 
-    public function regex()
+    public function getRegex()
     {
         return $this->regex;
     }
 
-    public function variableNames()
+    public function getVariableNames()
     {
         return $this->variable_names;
     }
 
-    public function variables()
+    public function getVariables()
     {
         return $this->variables;
     }
@@ -69,17 +60,17 @@ class Route
         $this->variables = $variables;
     }
 
-    public function handler()
+    public function getHandler()
     {
         return $this->handler;
     }
 
-    public function uri()
+    public function getUri()
     {
         return $this->uri;
     }
 
-    public function name()
+    public function getName()
     {
         return $this->name;
     }

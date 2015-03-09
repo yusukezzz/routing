@@ -1,11 +1,9 @@
-<?php
+<?php namespace yusukezzz\Routing;
 
-namespace FastRoute;
+use yusukezzz\Routing\Exceptions\MethodNotAllowedException;
+use yusukezzz\Routing\Exceptions\NotFoundException;
 
-use FastRoute\Exceptions\MethodNotAllowedException;
-use FastRoute\Exceptions\NotFoundException;
-
-class Dispatcher
+class RouteMatcher
 {
     /** @var array */
     protected $staticRouteMap;
@@ -21,29 +19,44 @@ class Dispatcher
      * @param string $httpMethod
      * @param string $uri
      * @return Route
+     * @throws MethodNotAllowedException
+     * @throws NotFoundException
      */
-    public function dispatch($httpMethod, $uri)
+    public function match($httpMethod, $uri)
     {
         if (isset($this->staticRouteMap[$uri])) {
-            return $this->dispatchStaticRoute($httpMethod, $uri);
+            return $this->matchStaticRoute($httpMethod, $uri);
         }
 
+        $route = null;
         $varRouteData = $this->variableRouteData;
         if (isset($varRouteData[$httpMethod])) {
-            $route = $this->dispatchVariableRoute($varRouteData[$httpMethod], $uri);
-            if ($route) {
-                return $route;
-            }
-        } else if ($httpMethod === 'HEAD' && isset($varRouteData['GET'])) {
-            $route = $this->dispatchVariableRoute($varRouteData['GET'], $uri);
-            if ($route) {
-                return $route;
-            }
+            $route = $this->matchVariableRoute($varRouteData[$httpMethod], $uri);
+        } elseif ($httpMethod === 'HEAD' && isset($varRouteData['GET'])) {
+            $route = $this->matchVariableRoute($varRouteData['GET'], $uri);
         }
 
-        $this->findAllowedMethods($httpMethod, $uri, $varRouteData);
+        // variable route matched
+        if ($route) {
+            return $route;
+        }
+
+        $allowedMethods = $this->findAllowedMethods($httpMethod, $uri, $varRouteData);
+
+        if ($allowedMethods) {
+            $this->handleMethodNotAllowed($allowedMethods);
+        }
+
+        // If there are no allowed methods the route simply does not exist
+        $this->handleNotFound($uri);
     }
 
+    /**
+     * @param string $httpMethod
+     * @param string $uri
+     * @param array $varRouteData
+     * @return array
+     */
     protected function findAllowedMethods($httpMethod, $uri, $varRouteData)
     {
         $allowedMethods = [];
@@ -52,27 +65,21 @@ class Dispatcher
                 continue;
             }
 
-            $result = $this->dispatchVariableRoute($routeData, $uri);
+            $result = $this->matchVariableRoute($routeData, $uri);
             if ($result) {
                 $allowedMethods[] = $method;
             }
         }
 
-        // If there are no allowed methods the route simply does not exist
-        if ($allowedMethods) {
-            $this->handleMethodNotAllowed($allowedMethods);
-        } else {
-            $this->handleNotFound($uri);
-        }
+        return $allowedMethods;
     }
 
     /**
      * @param string $httpMethod
      * @param string $uri
      * @return Route
-     * @throws MethodNotAllowedException
      */
-    protected function dispatchStaticRoute($httpMethod, $uri)
+    protected function matchStaticRoute($httpMethod, $uri)
     {
         $routes = $this->staticRouteMap[$uri];
 
@@ -89,12 +96,12 @@ class Dispatcher
      * @param array $routeData
      * @param string $uri
      * @return Route|null
-     * @throws NotFoundException
      */
-    protected function dispatchVariableRoute($routeData, $uri)
+    protected function matchVariableRoute($routeData, $uri)
     {
+        $route = null;
         foreach ($routeData as $data) {
-            if (!preg_match($data['regex'], $uri, $matches)) {
+            if ( ! preg_match($data['regex'], $uri, $matches)) {
                 continue;
             }
 
@@ -103,18 +110,18 @@ class Dispatcher
 
             $vars = [];
             $i = 0;
-            foreach ($route->variableNames() as $varName) {
+            foreach ($route->getVariableNames() as $varName) {
                 $vars[$varName] = $matches[++$i];
             }
             $route->setVariables($vars);
-            return $route;
+            break;
         }
 
-        return null;
+        return $route;
     }
 
     /**
-     * @param $uri
+     * @param string $uri
      * @throws NotFoundException
      */
     protected function handleNotFound($uri)
@@ -123,7 +130,7 @@ class Dispatcher
     }
 
     /**
-     * @param $allowed
+     * @param array $allowed
      * @throws MethodNotAllowedException
      */
     protected function handleMethodNotAllowed($allowed)

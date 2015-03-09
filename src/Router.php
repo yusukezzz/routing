@@ -1,6 +1,4 @@
-<?php
-
-namespace FastRoute;
+<?php namespace yusukezzz\Routing;
 
 class Router
 {
@@ -10,20 +8,30 @@ class Router
     protected $generator;
     /** @var RouteHandler */
     protected $handler;
-    /** @var Route */
-    protected $currentRoute = null;
 
-    public function __construct(RouteHandlerInterface $handler = null)
+    /**
+     * Current matched route instance
+     *
+     * @var Route
+     */
+    protected $currentRoute;
+
+    /**
+     * Cached results of urlFor method
+     *
+     * @var array
+     */
+    protected $generatedUrls = [];
+
+    public function __construct(RouteHandlerInterface $handler = null, RouteDataGenerator $generator = null)
     {
         $this->parser = new RouteParser;
-        $this->generator = new RouteDataGenerator();
         $this->handler = $handler ?: new RouteHandler();
+        $this->generator = $generator ?: new RouteDataGenerator();
     }
 
     /**
      * Adds a route to the collection.
-     *
-     * The syntax used in the $route string depends on the used route parser.
      *
      * @param string $httpMethod
      * @param string $uri
@@ -38,43 +46,45 @@ class Router
 
     public function get($uri, $handler, $name = null)
     {
-        $this->addRoute(Route::GET, $uri, $handler, $name);
+        $this->addRoute('GET', $uri, $handler, $name);
     }
 
     public function head($uri, $handler, $name = null)
     {
-        $this->addRoute(Route::HEAD, $uri, $handler, $name);
+        $this->addRoute('HEAD', $uri, $handler, $name);
     }
 
     public function post($uri, $handler, $name = null)
     {
-        $this->addRoute(Route::POST, $uri, $handler, $name);
+        $this->addRoute('POST', $uri, $handler, $name);
     }
 
     public function put($uri, $handler, $name = null)
     {
-        $this->addRoute(Route::PUT, $uri, $handler, $name);
+        $this->addRoute('PUT', $uri, $handler, $name);
     }
 
     public function delete($uri, $handler, $name = null)
     {
-        $this->addRoute(Route::DELETE, $uri, $handler, $name);
+        $this->addRoute('DELETE', $uri, $handler, $name);
     }
 
     public function options($uri, $handler, $name = null)
     {
-        $this->addRoute(Route::OPTIONS, $uri, $handler, $name);
+        $this->addRoute('OPTIONS', $uri, $handler, $name);
     }
 
     /**
+     * Handle request
+     *
      * @param string $httpMethod
      * @param string $uri
      * @return mixed
      */
     public function handle($httpMethod, $uri)
     {
-        $dispatcher = new Dispatcher($this->generator->getData(), $this->handler);
-        $this->currentRoute = $route = $dispatcher->dispatch($httpMethod, $uri);
+        $matcher = new RouteMatcher($this->generator->getData(), $this->handler);
+        $this->currentRoute = $route = $matcher->match($httpMethod, $uri);
 
         return $this->handler->handleRoute($route);
     }
@@ -97,21 +107,37 @@ class Router
      * @throws \InvalidArgumentException
      * @return string
      */
-    public function urlFor($name, $params = [])
+    public function urlFor($name, array $params = [])
     {
+        $cacheKey = md5($name . json_encode(ksort($params)));
+        if (array_key_exists($cacheKey, $this->generatedUrls)) {
+            return $this->generatedUrls[$cacheKey];
+        }
+
         $route = $this->generator->getNamedRoute($name);
-        if (is_null($route)) {
-            throw new \RuntimeException("Named route '{$name}' not found");
-        }
+        $url = $this->buildUrl($route, $params);
+        $this->generatedUrls[$cacheKey] = $url;
 
-        $variables = [];
-        foreach ($route->variableNames() as $key) {
+        return $url;
+    }
+
+    /**
+     * @param Route $route
+     * @param array $params
+     * @return string
+     */
+    protected function buildUrl(Route $route, array $params)
+    {
+        $targets = [];
+        $replacements = [];
+        foreach ($route->getVariableNames() as $key) {
             if ( ! isset($params[$key])) {
-                throw new \InvalidArgumentException("Variable '{$key}' not found or null for route '{$name}'");
+                throw new \InvalidArgumentException("Variable '{$key}' not found or null for route '{$route->getName()}'");
             }
-            $variables[] = '#\{' . $key . ':?.*?\}#';
+            $targets[] = ":" . $key;
+            $replacements[] = $params[$key];
         }
 
-        return preg_replace($variables, $params, $route->uri());
+        return str_replace($targets, $replacements, $route->getUri());
     }
 }
