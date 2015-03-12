@@ -45,12 +45,10 @@ php -S localhost:8080 router.php
 Reverse routing
 
 ```php
-
 // set third parameter to define named route
-$router->get('/hoge/:piyo', function($piyo){}, 'a_named_route')
+$router->get('/hoge/:piyo', function($piyo){}, 'a_named_route');
 echo $router->urlFor('a_named_route', ['piyo' => 'abc']);
 // output is '/hoge/abc'
-
 ```
 
 If you want to use Controller like routing, you should implement RouteHandlerInterface.
