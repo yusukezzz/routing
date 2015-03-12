@@ -11,7 +11,7 @@
          bootstrap="test/bootstrap.php"
         >
     <testsuites>
-        <testsuite name="FastRoute Tests">
+        <testsuite name="Tests">
             <directory>./test/</directory>
         </testsuite>
     </testsuites>
