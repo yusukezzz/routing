@@ -1,5 +1,6 @@
 yusukezzz\Routing - Simple and fast request routing for PHP
 =======================================
+[![Build Status](https://travis-ci.org/yusukezzz/routing.svg?branch=master)](https://travis-ci.org/yusukezzz/routing)
 
 This library forked from [nikic/FastRoute](https://github.com/nikic/FastRoute).
 
